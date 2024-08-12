@@ -1,0 +1,73 @@
+services:
+  esphome:
+    container_name: esphome
+    image: ghcr.io/esphome/esphome:stable
+    restart: unless-stopped
+    networks:
+      - local-net
+    ports:
+      - 6052:6052
+    environment:
+      - TZ
+      - UMASK
+    volumes:
+      - ./esphome:/config
+      - /etc/localtime:/etc/localtime:ro
+    privileged: true
+    labels:
+      - haus.dondon.cname=esphome
+      - haus.dondon.port=6052
+
+  double-take:
+    container_name: double-take
+    image: ghcr.io/skrashevich/double-take:main
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    volumes:
+      - ./double-take/storage:/.storage
+      - ./double-take/config.yml:/.storage/config.yml
+
+  ai-server:
+    container_name: ai-server
+    image: codeproject/ai-server:cuda12_2
+    runtime: nvidia
+    restart: unless-stopped
+    ports:
+      - 32168:32168
+    environment:
+      - TZ
+      - NVIDIA_VISIBLE_DEVICES
+      - NVIDIA_DRIVER_CAPABILITIES
+    volumes:
+      - ./codeproject.ai/etc:/etc/codeproject/ai
+      - ./codeproject.ai/modules:/app/modules
+
+  jellyfin:
+    container_name: jellyfin
+    image: lscr.io/linuxserver/jellyfin:latest
+    runtime: nvidia
+    restart: unless-stopped
+    networks:
+      - local-net
+    environment:
+      - PUID
+      - PGID
+      - TZ
+      - NVIDIA_VISIBLE_DEVICES
+      - NVIDIA_DRIVER_CAPABILITIES
+    volumes:
+      - ./jellyfin:/config
+      # - /mnt/homelab_storage/tv:/data/tvshows
+      # - /mnt/homelab_storage/movies:/data/movies
+
+networks:
+  local-net:
+    driver: macvlan
+    driver_opts:
+      parent: wlp3s0
+    ipam:
+      config:
+        - subnet: 192.168.68.0/24
+          ip_range: 192.168.68.0/24
+          gateway: 192.168.68.1
