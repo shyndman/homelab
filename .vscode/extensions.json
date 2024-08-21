@@ -1,6 +1,7 @@
 {
   "recommendations": [
-    "mkhl.direnv"
+    "mkhl.direnv",
+    "esphome.esphome-vscode"
   ],
 
 }
