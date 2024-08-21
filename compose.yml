@@ -2,14 +2,15 @@ services:
   esphome:
     container_name: esphome
     image: ghcr.io/esphome/esphome:stable
+    hostname: esphome
+    command: dashboard /config
     restart: unless-stopped
-    networks:
-      - local-net
     ports:
       - 6052:6052
     environment:
       - TZ
       - UMASK
+      - ESPHOME_DASHBOARD_USE_PING=true
     volumes:
       - ./esphome:/config
       - /etc/localtime:/etc/localtime:ro
@@ -22,6 +23,7 @@ services:
     container_name: double-take
     image: ghcr.io/skrashevich/double-take:main
     restart: unless-stopped
+    user: 1000:1000
     ports:
       - 3000:3000
     volumes:
@@ -48,8 +50,6 @@ services:
     image: lscr.io/linuxserver/jellyfin:latest
     runtime: nvidia
     restart: unless-stopped
-    networks:
-      - local-net
     environment:
       - PUID
       - PGID
@@ -62,12 +62,16 @@ services:
       # - /mnt/homelab_storage/movies:/data/movies
 
 networks:
-  local-net:
-    driver: macvlan
-    driver_opts:
-      parent: wlp3s0
-    ipam:
-      config:
-        - subnet: 192.168.68.0/24
-          ip_range: 192.168.68.0/24
-          gateway: 192.168.68.1
+  esphome-net:
+  # local-net:
+  #   name: 00_local-net
+  #   driver: macvlan
+  #   driver_opts:
+  #     parent: wlp3s0
+  #   ipam:
+  #     config:
+  #       - subnet: 192.168.84.0/22
+  #         gateway: 192.168.86.1
+  #         ip_range: 192.168.85.0/26
+  #         aux_addresses:
+  #           host: 192.168.85.0
