@@ -1,0 +1,9 @@
+<<: !include
+  file: 'packages/ble-beacon-tracker.yaml'
+  vars:
+    friendly_name: 'Kitchen Presence'
+    name: kitchen_presence
+
+status_led:
+  pin:
+    number: GPIO38

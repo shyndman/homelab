@@ -1,0 +1,15 @@
+substitutions:
+  ip_theoretical_thermostat: 192.168.85.25
+
+  ip_back_stairs_switches: 192.168.86.241
+  ip_front_hall_switches: 192.168.86.240
+
+  ip_living_room_floor_lamp: 192.168.85.40
+  ip_ender_3_power: 192.168.85.41
+  ip_bedside_lamp: 192.168.85.42
+
+  ip_p4_bay_utility: 192.168.86.228
+  ip_p4_master_relay: 192.168.86.220
+
+  ip_front_hall_presence: 192.168.86.229
+  ip_kitchen_presence: 192.168.86.230

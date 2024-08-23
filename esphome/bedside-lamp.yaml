@@ -1,0 +1,5 @@
+substitutions:
+  friendly_name: 'Bedside Lamp'
+  name: 'bedside_lamp'
+
+<<: !include packages/s31-switch.yaml

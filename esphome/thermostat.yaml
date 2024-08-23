@@ -1,0 +1,315 @@
+substitutions:
+  friendly_name: Theoretical Thermostat v1.5.0
+  name: theoretical_thermostat
+
+packages:
+  device-base: !include packages/device-base.yaml
+
+esphome:
+  platformio_options:
+    build_flags: -DBOARD_HAS_PSRAM
+    board_build.f_flash: 80000000L
+    board_build.flash_mode: dio
+    board_build.partitions: /config/include/partitions_16MB.csv
+    build_unflags: -Werror=all
+    upload_speed: 921600
+
+esp32:
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      COMPILER_OPTIMIZATION_SIZE: y
+      type: esp-idf
+
+climate:
+  - platform: thermostat
+    name: Climate Control
+    visual:
+      min_temperature: 16
+      max_temperature: 30
+      temperature_step:
+        target_temperature: 0.25
+        current_temperature: 0.1
+    on_boot_restore_from: MEMORY
+    sensor: target_room_temperature
+    min_idle_time: 2min
+    min_cooling_off_time: 2min
+    min_heating_off_time: 2min
+    min_heating_run_time: 1min
+    min_cooling_run_time: 1min
+    min_fanning_off_time: 1min
+    min_fanning_run_time: 2min
+    fan_with_cooling: True
+    idle_action:
+      then:
+        - switch.turn_off: fan_switch
+        - switch.turn_off: ac_switch
+        - switch.turn_off: heat_switch
+        - light.turn_off: action_led
+    heat_action:
+      then:
+        - switch.turn_on: heat_switch
+        - light.turn_on:
+            id: action_led
+            red: 100%
+            green: 63%
+            blue: 10%
+            brightness: 25%
+    cool_action:
+      then:
+        - switch.turn_on: ac_switch
+        - light.turn_on:
+            id: action_led
+            red: 13%
+            green: 82%
+            blue: 100%
+            brightness: 18%
+    fan_only_action:
+      then:
+        - switch.turn_on: fan_switch
+    preset:
+      - name: home
+        default_target_temperature_low: 22
+        default_target_temperature_high: 25
+      - name: eco
+        default_target_temperature_low: 21
+        default_target_temperature_high: 26
+      - name: sleep
+        default_target_temperature_low: 20
+        default_target_temperature_high: 23
+      - name: away
+        default_target_temperature_low: 16
+        default_target_temperature_high: 30
+
+i2c:
+  sda: 8
+  scl: 9
+  frequency: 800kHz
+
+font:
+  - id: primary_stat_font
+    file:
+      type: gfonts
+      family: Roboto
+      weight: Bold
+    size: 34
+    glyphs: '!"%()+=,-_.:°³/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'
+    bpp: 1
+  - id: secondary_stat_font
+    file: 'gfonts://Roboto+Mono'
+    size: 17
+    glyphs: '!"%()+=,-_.:°³/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'
+    bpp: 1
+
+display:
+  - platform: ssd1306_i2c
+    id: stat_display
+    model: 'SSD1306 128x64'
+    flip_x: false
+    flip_y: false
+    rotation: 90°
+    address: 0x3C
+    update_interval: 1s
+    lambda: |-
+      it.printf(2, 2, id(secondary_stat_font), "%.1fV", id(logic_voltage).state);
+      it.printf(2, 22, id(secondary_stat_font), "%.0fmA", id(logic_current).state * 1000.0);
+      it.printf(2, 42, id(secondary_stat_font), "%.0fmW", id(logic_power).state * 1000.0);
+#     pages:
+#       - id: thermometer
+#         lambda: |-
+#             it.printf(0, 0, id(primary_stat_font), "%.1f°C", id(temperature).state);
+#             it.printf(0, 42, id(secondary_stat_font), "%.1f%%", id(rel_humidity).state);
+#             it.printf(58, 42, id(secondary_stat_font), "%.1fg/m³", id(abs_humidity).state);
+#       - id: battery
+#         lambda: |-
+#             it.printf(0, 0, id(primary_stat_font), "%.2fV", id(battery_voltage).state);
+#             it.printf(0, 42, id(secondary_stat_font), "up %s", id(uptime_human).state.c_str());
+
+# interval:
+#   - interval: 20s
+#     then:
+#       - display.page.show_next: stat_display
+#       - component.update: stat_display
+
+binary_sensor:
+  - platform: gpio
+    name: 'Is 5V Present?'
+    id: 'is_5v_present'
+    pin: 33
+    device_class: power
+    on_state:
+      then:
+        - component.update: battery_voltage
+
+sensor:
+  - platform: adc
+    pin: 10
+    id: battery_voltage
+    name: 'Battery Voltage'
+    attenuation: 2.5db
+    update_interval: 60s
+    samples: 11
+    device_class: voltage
+    unit_of_measurement: V
+    filters:
+      - multiply: 3.855
+      - clamp:
+          max_value: 4.2
+    on_value:
+      then:
+        - sensor.template.publish:
+            id: battery_remaining
+            # https://electronics.stackexchange.com/a/551667
+            state: !lambda |-
+              return 123.0 - 123.0 / pow((1 + pow(x / 3.7, 80.0)), 0.165);
+  - platform: ina260
+    address: 0x40
+    current:
+      name: "Logic Current"
+      id: logic_current
+      internal: true
+    power:
+      name: "Logic Power"
+      id: logic_power
+      internal: true
+    bus_voltage:
+      name: "Logic Voltage"
+      id: logic_voltage
+      internal: true
+    update_interval: 1s
+
+  - platform: template
+    id: battery_remaining
+    name: 'Battery Remaining'
+    device_class: battery
+    unit_of_measurement: '%'
+    accuracy_decimals: 0
+    filters:
+      - clamp:
+          max_value: 100
+          min_value: 0
+    # on_value:
+    #   then:
+    #     - if:
+    #         condition:
+    #           lambda: 'return x < 30.0;'
+    #         then:
+    #           - switch.turn_on: parasite_mode_enabled
+    #     - if:
+    #         condition:
+    #           lambda: 'return x > 40.0;'
+    #         then:
+    #           - switch.turn_off: parasite_mode_enabled
+
+  - platform: dht
+    pin: 2
+    model: DHT11
+    update_interval: 60s
+    humidity:
+      name: Humidity
+      id: rel_humidity
+      accuracy_decimals: 1
+    temperature:
+      name: Temperature
+      id: temperature
+      unit_of_measurement: °C
+      accuracy_decimals: 1
+
+  - platform: absolute_humidity
+    name: Absolute Humidity
+    id: abs_humidity
+    temperature: temperature
+    humidity: rel_humidity
+    accuracy_decimals: 1
+
+  - platform: homeassistant
+    name: Target Room Temperature
+    id: target_room_temperature
+    entity_id: sensor.thermostat_target_room_temperature
+
+  - platform: uptime
+    id: uptime_sensor
+    update_interval: 30s
+    on_raw_value:
+      then:
+        - text_sensor.template.publish:
+            id: uptime_human
+            state: !lambda |-
+              int seconds = round(id(uptime_sensor).raw_state);
+              int days = seconds / (24 * 3600);
+              seconds = seconds % (24 * 3600);
+              int hours = seconds / 3600;
+              seconds = seconds % 3600;
+              int minutes = seconds /  60;
+              seconds = seconds % 60;
+              return (
+                (days ? to_string(days) + "d " : "") +
+                (hours ? to_string(hours) + "h " : "") +
+                (minutes ? to_string(minutes) + "m " : "") +
+                (to_string(seconds) + "s")
+              ).c_str();
+
+  - platform: wifi_signal
+    name: Wifi RSSI
+    update_interval: 120s
+
+text_sensor:
+  - platform: template
+    name: Uptime
+    id: uptime_human
+    internal: true
+  - platform: wifi_info
+    ip_address:
+      name: IP
+    ssid:
+      name: SSID
+    bssid:
+      name: BSSID
+
+switch:
+  - platform: gpio
+    pin: 35
+    name: Parasite Mode Enabled
+    id: parasite_mode_enabled
+  - platform: gpio
+    pin: 37
+    name: A/C Switch
+    id: ac_switch
+    interlock: ['heat_switch']
+    on_turn_on:
+      - switch.turn_off: heat_switch
+  - platform: gpio
+    pin: 36
+    name: Heat Switch
+    id: heat_switch
+    interlock: ['ac_switch']
+    on_turn_on:
+      - switch.turn_off: ac_switch
+  - platform: gpio
+    pin: 34
+    name: 'Fan Switch'
+    id: 'fan_switch'
+  # LDO2 is required to light up the onboard RGB LED
+  - platform: gpio
+    pin: 17
+    name: LDO2 Enabled
+    id: ldo2_enabled
+    internal: True
+
+light:
+  - platform: esp32_rmt_led_strip
+    id: action_led
+    name: Action Indicator RGB
+    chipset: ws2812
+    num_leds: 1
+    rgb_order: GRB
+    pin: 18
+    rmt_channel: 0
+    on_turn_on:
+      then:
+        - switch.turn_on: ldo2_enabled
+    on_turn_off:
+      then:
+        - switch.turn_off: ldo2_enabled

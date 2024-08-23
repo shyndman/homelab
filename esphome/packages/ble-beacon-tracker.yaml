@@ -1,0 +1,85 @@
+<<: !include device-ip-map.yaml
+
+esphome:
+  friendly_name: $friendly_name
+  name: $name
+
+  platformio_options:
+    board_build.f_cpu: 240000000L
+    board_build.f_flash: 80000000L
+    board_build.flash_mode: dio
+    board_build.partitions: /config/include/partitions_16MB.csv
+    build_unflags: -Werror=all
+    upload_speed: 921600
+
+esp32:
+  board: um_pros3
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      COMPILER_OPTIMIZATION_SIZE: y
+
+logger:
+  level: DEBUG
+
+time:
+  - platform: homeassistant
+    id: esptime
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  manual_ip:
+    static_ip: ${ip_${name}}
+    gateway: 192.168.0.1
+    subnet: 255.255.252.0
+
+api:
+
+ota:
+  platform: esphome
+
+bluetooth_proxy:
+  active: true
+
+esp32_ble_tracker:
+  scan_parameters:
+    interval: 1100ms
+    window: 1100ms
+    active: false
+
+binary_sensor:
+  - platform: ble_presence
+    name: "Scott's Pixel Presence"
+    ibeacon_uuid: 7dee9c8d-6238-4098-833b-673119f28d5e
+    ibeacon_major: 100
+    ibeacon_minor: 40004
+  - platform: ble_presence
+    name: "Scott's Laptop Presence"
+    mac_address: FC:B0:DE:18:0F:FE
+  - platform: ble_presence
+    name: "Hilary's watch Presence"
+    irk: 456ca00d522b1a6905bbeee3ce1abd06
+  - platform: ble_presence
+    name: "Hilary's iPhone Presence"
+    irk: 7e8bd15378892e50154eb120bff7502b
+
+sensor:
+  - platform: ble_rssi
+    name: Scott's Pixel RSSI
+    ibeacon_uuid: 7dee9c8d-6238-4098-833b-673119f28d5e
+    ibeacon_major: 100
+    ibeacon_minor: 40004
+  - platform: ble_rssi
+    name: "Scott's Laptop RSSI"
+    mac_address: FC:B0:DE:18:0F:FE
+  - platform: ble_rssi
+    name: Hilary's watch RSSI
+    # irk: 14D28455639849BD3FF9DDD4D804847D
+    irk: 456ca00d522b1a6905bbeee3ce1abd06
+  - platform: ble_rssi
+    name: Hilary's iPhone RSSI
+    # irk: 14D28455639849BD3FF9DDD4D804847D
+    irk: 7e8bd15378892e50154eb120bff7502b

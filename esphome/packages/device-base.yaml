@@ -1,0 +1,60 @@
+<<: !include ./device-ip-map.yaml
+
+# substitutions:
+#   friendly_name: $friendly_name
+#   name: $name
+
+esphome:
+  friendly_name: $friendly_name
+  name: $name
+
+logger:
+  level: VERBOSE
+
+debug:
+  update_interval: 5min
+
+time:
+  - platform: homeassistant
+    id: esptime
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  manual_ip:
+    gateway: 192.168.86.1
+    subnet: 255.255.252.0
+    static_ip: ${ip_${name}}
+
+safe_mode:
+
+api:
+  reboot_timeout: 1min
+
+ota:
+  - platform: esphome
+
+button:
+  - platform: restart
+    name: 'Restart'
+  - platform: safe_mode
+    name: 'Restart (Safe Mode)'
+
+sensor:
+  - platform: debug
+    # free:
+    #   name: "Heap Free"
+    # block:
+    #   name: "Heap Max Block"
+    loop_time:
+      name: "Loop Time"
+    # psram:
+    #   name: "Free PSRAM"
+
+text_sensor:
+  - platform: debug
+    device:
+      name: 'Device Info'
+    reset_reason:
+      name: 'Reset Reason'

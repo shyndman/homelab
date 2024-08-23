@@ -1,0 +1,7 @@
+<<: !include packages/device-ip-map.yaml
+
+substitutions:
+  friendly_name: 'Ender 3 Power'
+  name: ender_3_power
+
+<<: !include packages/s31-switch.yaml

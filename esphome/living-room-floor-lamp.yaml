@@ -1,0 +1,6 @@
+substitutions:
+  friendly_name: 'Living Room Floor Lamp'
+  name: 'living_room_floor_lamp'
+
+packages:
+  s31-switch: <<: !include packages/s31-switch.yaml
