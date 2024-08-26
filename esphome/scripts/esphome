@@ -1,0 +1,36 @@
+#!/usr/bin/env -S python
+
+from sh import docker, ErrorReturnCode_1
+import os
+import sys
+
+# Executes an esphome command in the running dashboard container, if any
+
+SCRIPTS_PATH = f"{os.path.dirname(__file__)}"
+COMPOSE_PATH = os.path.normpath(f"{SCRIPTS_PATH}/../../compose.yml")
+CONFIG_PATH = os.path.abspath(f"{SCRIPTS_PATH}/..")
+CONTAINER_NAME = "esphome"
+
+containers = docker.compose(
+    "--file", COMPOSE_PATH, "ps", "--quiet", CONTAINER_NAME
+).split()
+if not containers:
+    print(f"No running {CONTAINER_NAME} container found", file=sys.stderr)
+
+    exit(1)
+
+possible_config_path = sys.argv[-1]
+if len(sys.argv) > 1 and os.path.isfile(possible_config_path):
+    config_path = os.path.abspath(possible_config_path)
+    sys.argv[-1] = os.path.relpath(config_path, CONFIG_PATH)
+
+docker.compose(
+    "--file",
+    COMPOSE_PATH,
+    "exec",
+    "--no-TTY",
+    CONTAINER_NAME,
+    "esphome",
+    *sys.argv[1:],
+    _fg=True
+)
