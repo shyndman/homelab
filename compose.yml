@@ -1,7 +1,7 @@
 services:
   esphome:
     container_name: esphome
-    image: ghcr.io/esphome/esphome:stable
+    image: ghcr.io/esphome/esphome:beta
     hostname: esphome
     command: dashboard /config
     restart: unless-stopped
@@ -43,8 +43,8 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES
     volumes:
       - ./jellyfin:/config
-      # - /mnt/homelab_storage/tv:/data/tvshows
-      # - /mnt/homelab_storage/movies:/data/movies
+      # - /opt/media/tv:/data/tvshows
+      # - /opt/media/movies:/data/movies
 
 networks:
   esphome-net:
