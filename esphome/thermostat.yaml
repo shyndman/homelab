@@ -1,5 +1,8 @@
+# gnd gnd gnd io42 io41 io40 io39 io38 io48 io47 io21 io18 gnd vbus vbus
+# /   /   /        x    x    /    x    x    x    /    x    x   x    /
+
 substitutions:
-  friendly_name: Theoretical Thermostat v1.5.0
+  friendly_name: Theoretical Thermostat v1.7.0
   name: theoretical_thermostat
 
 packages:
@@ -12,7 +15,14 @@ esphome:
     board_build.flash_mode: dio
     board_build.partitions: /config/include/partitions_16MB.csv
     build_unflags: -Werror=all
-    upload_speed: 921600
+  on_boot:
+    then:
+      - light.turn_on:
+          id: action_led
+          red: 50%
+          green: 80%
+          blue: 20%
+          brightness: 10%
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -20,8 +30,31 @@ esp32:
   framework:
     type: esp-idf
     sdkconfig_options:
-      COMPILER_OPTIMIZATION_SIZE: y
+      # COMPILER_OPTIMIZATION_SIZE: y
       type: esp-idf
+
+logger:
+
+spi:
+  id: quad_spi
+  type: quad
+  clk_pin: 15
+  data_pins: [14, 10, 16, 12]
+
+i2c:
+  sda: 6
+  scl: 7
+  scan: true
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+touchscreen:
+  - platform: cst226
+    id: panel_touchscreen
+    interrupt_pin: 8
+    reset_pin: 17
 
 climate:
   - platform: thermostat
@@ -47,25 +80,25 @@ climate:
         - switch.turn_off: fan_switch
         - switch.turn_off: ac_switch
         - switch.turn_off: heat_switch
-        - light.turn_off: action_led
+        # - light.turn_off: action_led
     heat_action:
       then:
         - switch.turn_on: heat_switch
-        - light.turn_on:
-            id: action_led
-            red: 100%
-            green: 63%
-            blue: 10%
-            brightness: 25%
+        # - light.turn_on:
+        #     id: action_led
+        #     red: 100%
+        #     green: 63%
+        #     blue: 10%
+        #     brightness: 25%
     cool_action:
       then:
         - switch.turn_on: ac_switch
-        - light.turn_on:
-            id: action_led
-            red: 13%
-            green: 82%
-            blue: 100%
-            brightness: 18%
+        # - light.turn_on:
+        #     id: action_led
+        #     red: 13%
+        #     green: 82%
+        #     blue: 100%
+        #     brightness: 18%
     fan_only_action:
       then:
         - switch.turn_on: fan_switch
@@ -83,87 +116,71 @@ climate:
         default_target_temperature_low: 16
         default_target_temperature_high: 30
 
-i2c:
-  sda: 8
-  scl: 9
-  frequency: 800kHz
-
 font:
   - id: primary_stat_font
     file:
       type: gfonts
       family: Roboto
       weight: Bold
+    size: 102
+    glyphs: '!"%()+=,-_.:°³/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'
+    bpp: 8
+  - id: secondary_stat_font
+    file: 'gfonts://Roboto'
     size: 34
     glyphs: '!"%()+=,-_.:°³/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'
-    bpp: 1
-  - id: secondary_stat_font
-    file: 'gfonts://Roboto+Mono'
-    size: 17
-    glyphs: '!"%()+=,-_.:°³/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz'
-    bpp: 1
+    bpp: 8
 
 display:
-  - platform: ssd1306_i2c
-    id: stat_display
-    model: 'SSD1306 128x64'
-    flip_x: false
-    flip_y: false
-    rotation: 90°
-    address: 0x3C
-    update_interval: 1s
+  - platform: qspi_amoled
+    model: RM690B0
+    data_rate: 80MHz
+    spi_mode: mode0
+    dimensions:
+      width: 450
+      height: 600
+      offset_width: 16
+    color_order: rgb
+    invert_colors: false
+    brightness: 255
+    cs_pin: 11
+    reset_pin: 13
+    enable_pin: 9
+    update_interval: 5s
+    auto_clear_enabled: true
     lambda: |-
-      it.printf(2, 2, id(secondary_stat_font), "%.1fV", id(logic_voltage).state);
-      it.printf(2, 22, id(secondary_stat_font), "%.0fmA", id(logic_current).state * 1000.0);
-      it.printf(2, 42, id(secondary_stat_font), "%.0fmW", id(logic_power).state * 1000.0);
-#     pages:
-#       - id: thermometer
-#         lambda: |-
-#             it.printf(0, 0, id(primary_stat_font), "%.1f°C", id(temperature).state);
-#             it.printf(0, 42, id(secondary_stat_font), "%.1f%%", id(rel_humidity).state);
-#             it.printf(58, 42, id(secondary_stat_font), "%.1fg/m³", id(abs_humidity).state);
-#       - id: battery
-#         lambda: |-
-#             it.printf(0, 0, id(primary_stat_font), "%.2fV", id(battery_voltage).state);
-#             it.printf(0, 42, id(secondary_stat_font), "up %s", id(uptime_human).state.c_str());
+      double y = 16.0;
+      it.printf(16, y, id(primary_stat_font), "%.1f°C", id(temperature).state);
+      y += 102.0;
+      y += 8.0;
+      it.printf(16, y, id(secondary_stat_font), "Humidity: %.1f%%", id(rel_humidity).state);
+      y += 38.0;
+      y += 8.0;
+      it.printf(16, y, id(secondary_stat_font), "Uptime: %s", id(uptime_human).state.c_str());
+      y += 38.0;
 
-# interval:
-#   - interval: 20s
-#     then:
-#       - display.page.show_next: stat_display
-#       - component.update: stat_display
-
-binary_sensor:
-  - platform: gpio
-    name: 'Is 5V Present?'
-    id: 'is_5v_present'
-    pin: 33
-    device_class: power
-    on_state:
-      then:
-        - component.update: battery_voltage
 
 sensor:
-  - platform: adc
-    pin: 10
-    id: battery_voltage
-    name: 'Battery Voltage'
-    attenuation: 2.5db
-    update_interval: 60s
-    samples: 11
-    device_class: voltage
-    unit_of_measurement: V
-    filters:
-      - multiply: 3.855
-      - clamp:
-          max_value: 4.2
-    on_value:
-      then:
-        - sensor.template.publish:
-            id: battery_remaining
-            # https://electronics.stackexchange.com/a/551667
-            state: !lambda |-
-              return 123.0 - 123.0 / pow((1 + pow(x / 3.7, 80.0)), 0.165);
+  # - platform: adc
+  #   pin: 10
+  #   id: battery_voltage
+  #   name: 'Battery Voltage'
+  #   attenuation: 2.5db
+  #   update_interval: 60s
+  #   samples: 11
+  #   device_class: voltage
+  #   unit_of_measurement: V
+  #   filters:
+  #     - multiply: 3.855
+  #     - clamp:
+  #         max_value: 4.2
+  #   on_value:
+  #     then:
+  #       - sensor.template.publish:
+  #           id: battery_remaining
+  #           # https://electronics.stackexchange.com/a/551667
+  #           state: !lambda |-
+  #             return 123.0 - 123.0 / pow((1 + pow(x / 3.7, 80.0)), 0.165);
   - platform: ina260
     address: 0x40
     current:
@@ -178,18 +195,18 @@ sensor:
       name: "Logic Voltage"
       id: logic_voltage
       internal: true
-    update_interval: 1s
+    update_interval: 30s
 
-  - platform: template
-    id: battery_remaining
-    name: 'Battery Remaining'
-    device_class: battery
-    unit_of_measurement: '%'
-    accuracy_decimals: 0
-    filters:
-      - clamp:
-          max_value: 100
-          min_value: 0
+  # - platform: template
+  #   id: battery_remaining
+  #   name: 'Battery Remaining'
+  #   device_class: battery
+  #   unit_of_measurement: '%'
+  #   accuracy_decimals: 0
+  #   filters:
+  #     - clamp:
+  #         max_value: 100
+  #         min_value: 0
     # on_value:
     #   then:
     #     - if:
@@ -204,9 +221,9 @@ sensor:
     #           - switch.turn_off: parasite_mode_enabled
 
   - platform: dht
-    pin: 2
+    pin: 40
     model: DHT11
-    update_interval: 60s
+    update_interval: 5s
     humidity:
       name: Humidity
       id: rel_humidity
@@ -270,33 +287,27 @@ text_sensor:
 
 switch:
   - platform: gpio
-    pin: 35
+    pin: 38
     name: Parasite Mode Enabled
     id: parasite_mode_enabled
   - platform: gpio
-    pin: 37
+    pin: 48
     name: A/C Switch
     id: ac_switch
     interlock: ['heat_switch']
     on_turn_on:
       - switch.turn_off: heat_switch
   - platform: gpio
-    pin: 36
+    pin: 47
     name: Heat Switch
     id: heat_switch
     interlock: ['ac_switch']
     on_turn_on:
       - switch.turn_off: ac_switch
   - platform: gpio
-    pin: 34
+    pin: 18
     name: 'Fan Switch'
     id: 'fan_switch'
-  # LDO2 is required to light up the onboard RGB LED
-  - platform: gpio
-    pin: 17
-    name: LDO2 Enabled
-    id: ldo2_enabled
-    internal: True
 
 light:
   - platform: esp32_rmt_led_strip
@@ -305,11 +316,5 @@ light:
     chipset: ws2812
     num_leds: 1
     rgb_order: GRB
-    pin: 18
+    pin: 41
     rmt_channel: 0
-    on_turn_on:
-      then:
-        - switch.turn_on: ldo2_enabled
-    on_turn_off:
-      then:
-        - switch.turn_off: ldo2_enabled
