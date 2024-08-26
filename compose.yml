@@ -30,21 +30,6 @@ services:
       - ./double-take/storage:/.storage
       - ./double-take/config.yml:/.storage/config.yml
 
-  ai-server:
-    container_name: ai-server
-    image: codeproject/ai-server:cuda12_2
-    runtime: nvidia
-    restart: unless-stopped
-    ports:
-      - 32168:32168
-    environment:
-      - TZ
-      - NVIDIA_VISIBLE_DEVICES
-      - NVIDIA_DRIVER_CAPABILITIES
-    volumes:
-      - ./codeproject.ai/etc:/etc/codeproject/ai
-      - ./codeproject.ai/modules:/app/modules
-
   jellyfin:
     container_name: jellyfin
     image: lscr.io/linuxserver/jellyfin:latest
