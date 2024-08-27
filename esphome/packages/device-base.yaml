@@ -9,7 +9,7 @@ esphome:
   name: $name
 
 logger:
-  level: VERBOSE
+  level: DEBUG
 
 debug:
   update_interval: 5min
