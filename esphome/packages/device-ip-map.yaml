@@ -1,5 +1,6 @@
 substitutions:
-  ip_theoretical_thermostat: 192.168.85.25
+  ip_theoretical_thermostat: 192.168.85.26
+  ip_thermostat_climate_ctrl: 192.168.85.27
 
   ip_back_stairs_switches: 192.168.86.241
   ip_front_hall_switches: 192.168.86.240
