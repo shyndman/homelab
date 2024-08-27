@@ -1,7 +1,7 @@
 services:
   esphome:
     container_name: esphome
-    image: ghcr.io/esphome/esphome:beta
+    image: ghcr.io/esphome/esphome:stable
     hostname: esphome
     command: dashboard /config
     restart: unless-stopped
