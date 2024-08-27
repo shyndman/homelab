@@ -259,7 +259,7 @@ sensor:
               seconds = seconds % (24 * 3600);
               int hours = seconds / 3600;
               seconds = seconds % 3600;
-              int minutes = seconds /  60;
+              int minutes = seconds / 60;
               seconds = seconds % 60;
               return (
                 (days ? to_string(days) + "d " : "") +
