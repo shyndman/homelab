@@ -1,2 +1,3 @@
 .venv/
 double-take/storage/{!config.yml}
+scripts/images/*.png
